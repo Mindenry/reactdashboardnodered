@@ -224,11 +224,3 @@ const api = axios.create({
 2. **Caching** - Cache ข้อมูลใน localStorage
 3. **Lazy Loading** - โหลดข้อมูลตามต้องการ
 4. **Optimistic Updates** - อัปเดต UI ก่อน API response
-
-## License
-
-MIT License - ใช้งานได้อย่างอิสระ
-
-## ผู้พัฒนา
-
-พัฒนาด้วย ❤️ โดย AI Assistant
