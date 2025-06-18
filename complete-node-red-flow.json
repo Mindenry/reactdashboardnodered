@@ -1,0 +1,267 @@
+[
+  {
+    "id": "mysql_config",
+    "type": "MySQLdatabase",
+    "name": "LocalMySQL",
+    "host": "localhost",
+    "port": "3306",
+    "db": "dashboard_db",
+    "tz": "",
+    "charset": "UTF8"
+  },
+  {
+    "id": "http-in-employees",
+    "type": "http in",
+    "z": "3107b21e9acff957",
+    "name": "Get Employees",
+    "url": "/api/employees",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 120,
+    "y": 100,
+    "wires": [["function-parse-query"]]
+  },
+  {
+    "id": "function-parse-query",
+    "type": "function",
+    "z": "3107b21e9acff957",
+    "name": "Parse Query",
+    "func": "// รับ query จาก request body\nmsg.topic = msg.payload.topic || 'SELECT * FROM employees ORDER BY join_date DESC';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 100,
+    "wires": [["mysql-select-employees"]]
+  },
+  {
+    "id": "mysql-select-employees",
+    "type": "mysql",
+    "z": "3107b21e9acff957",
+    "mydb": "mysql_config",
+    "name": "Select Employees",
+    "x": 520,
+    "y": 100,
+    "wires": [["function-format-response"]]
+  },
+  {
+    "id": "function-format-response",
+    "type": "function",
+    "z": "3107b21e9acff957",
+    "name": "Format Response",
+    "func": "// จัดรูปแบบข้อมูลสำหรับส่งกลับ\nif (msg.payload && Array.isArray(msg.payload)) {\n    msg.payload = msg.payload.map(row => {\n        return {\n            id: row.id,\n            name: row.name,\n            email: row.email,\n            department: row.department,\n            salary: parseFloat(row.salary),\n            join_date: row.join_date,\n            status: row.status\n        };\n    });\n} else {\n    msg.payload = [];\n}\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 720,
+    "y": 100,
+    "wires": [["http-response-employees"]]
+  },
+  {
+    "id": "http-response-employees",
+    "type": "http response",
+    "z": "3107b21e9acff957",
+    "name": "Employees Response",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    },
+    "x": 920,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "http-in-add-employee",
+    "type": "http in",
+    "z": "3107b21e9acff957",
+    "name": "Add Employee",
+    "url": "/api/employees/add",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 120,
+    "y": 200,
+    "wires": [["function-prepare-add"]]
+  },
+  {
+    "id": "function-prepare-add",
+    "type": "function",
+    "z": "3107b21e9acff957",
+    "name": "Prepare Add Employee",
+    "func": "// รับข้อมูลพนักงานใหม่จาก request body\nconst employeeData = msg.payload;\n\n// Sanitize input to prevent SQL injection\nconst name = employeeData.name.replace(/'/g, \"''\");\nconst email = employeeData.email.replace(/'/g, \"''\");\nconst department = employeeData.department.replace(/'/g, \"''\");\nconst salary = parseFloat(employeeData.salary);\n\nmsg.topic = `INSERT INTO employees (name, email, department, salary, join_date, status) \n             VALUES ('${name}', '${email}', \n                     '${department}', ${salary}, \n                     NOW(), 'Active')`;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 200,
+    "wires": [["mysql-insert-employee"]]
+  },
+  {
+    "id": "mysql-insert-employee",
+    "type": "mysql",
+    "z": "3107b21e9acff957",
+    "mydb": "mysql_config",
+    "name": "Insert Employee",
+    "x": 520,
+    "y": 200,
+    "wires": [["function-format-add-response"]]
+  },
+  {
+    "id": "function-format-add-response",
+    "type": "function",
+    "z": "3107b21e9acff957",
+    "name": "Format Add Response",
+    "func": "// จัดรูปแบบ response สำหรับการเพิ่มพนักงาน\nif (msg.payload && msg.payload.insertId) {\n    msg.payload = {\n        success: true,\n        message: 'เพิ่มพนักงานสำเร็จ',\n        id: msg.payload.insertId\n    };\n} else {\n    msg.payload = {\n        success: false,\n        message: 'เกิดข้อผิดพลาดในการเพิ่มพนักงาน'\n    };\n}\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 720,
+    "y": 200,
+    "wires": [["http-response-add"]]
+  },
+  {
+    "id": "http-response-add",
+    "type": "http response",
+    "z": "3107b21e9acff957",
+    "name": "Add Employee Response",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    },
+    "x": 920,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "http-in-options",
+    "type": "http in",
+    "z": "3107b21e9acff957",
+    "name": "CORS Options",
+    "url": "/api/*",
+    "method": "options",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 120,
+    "y": 300,
+    "wires": [["http-response-options"]]
+  },
+  {
+    "id": "http-response-options",
+    "type": "http response",
+    "z": "3107b21e9acff957",
+    "name": "CORS Options Response",
+    "statusCode": "200",
+    "headers": {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    },
+    "x": 320,
+    "y": 300,
+    "wires": []
+  },
+  {
+    "id": "inject-create-table",
+    "type": "inject",
+    "z": "3107b21e9acff957",
+    "name": "Create Table",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "v": "CREATE TABLE IF NOT EXISTS employees (\n    id INT AUTO_INCREMENT PRIMARY KEY,\n    name VARCHAR(100) NOT NULL,\n    email VARCHAR(100) UNIQUE NOT NULL,\n    department VARCHAR(50) NOT NULL,\n    salary DECIMAL(10,2) NOT NULL,\n    join_date DATE NOT NULL,\n    status VARCHAR(20) DEFAULT 'Active'\n)",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 120,
+    "y": 400,
+    "wires": [["mysql-create-table"]]
+  },
+  {
+    "id": "mysql-create-table",
+    "type": "mysql",
+    "z": "3107b21e9acff957",
+    "mydb": "mysql_config",
+    "name": "Create Table",
+    "x": 320,
+    "y": 400,
+    "wires": [["inject-sample-data"]]
+  },
+  {
+    "id": "inject-sample-data",
+    "type": "inject",
+    "z": "3107b21e9acff957",
+    "name": "Insert Sample Data",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "v": "INSERT IGNORE INTO employees (name, email, department, salary, join_date, status) VALUES\n('John Smith', 'john.smith@company.com', 'Engineering', 75000, '2023-01-15', 'Active'),\n('Sarah Johnson', 'sarah.johnson@company.com', 'Marketing', 65000, '2023-02-01', 'Active'),\n('Mike Chen', 'mike.chen@company.com', 'Engineering', 80000, '2023-01-20', 'Active'),\n('Lisa Brown', 'lisa.brown@company.com', 'HR', 55000, '2023-03-10', 'Active'),\n('David Wilson', 'david.wilson@company.com', 'Sales', 70000, '2023-02-15', 'Active')",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 2,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 520,
+    "y": 400,
+    "wires": [["mysql-insert-sample"]]
+  },
+  {
+    "id": "mysql-insert-sample",
+    "type": "mysql",
+    "z": "3107b21e9acff957",
+    "mydb": "mysql_config",
+    "name": "Insert Sample Data",
+    "x": 720,
+    "y": 400,
+    "wires": [["debug-sample-data"]]
+  },
+  {
+    "id": "debug-sample-data",
+    "type": "debug",
+    "z": "3107b21e9acff957",
+    "name": "Sample Data Created",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 920,
+    "y": 400,
+    "wires": []
+  }
+]

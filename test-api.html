@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="th">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ทดสอบ API - ระบบจัดการพนักงาน</title>
+        <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .response {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+    </style>
+    </head>
+    <body>
+        <h1>🧪 ทดสอบ API - ระบบจัดการพนักงาน</h1>
+
+        <div class="container">
+            <h2>📋 ดึงข้อมูลพนักงานทั้งหมด</h2>
+            <button onclick="getEmployees()">ดึงข้อมูลพนักงาน</button>
+            <div id="employeesResponse" class="response"></div>
+        </div>
+
+        <div class="container">
+            <h2>➕ เพิ่มพนักงานใหม่</h2>
+            <form id="addEmployeeForm">
+                <div class="form-group">
+                    <label for="name">ชื่อ:</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">อีเมล:</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="department">แผนก:</label>
+                    <select id="department" required>
+                        <option value>เลือกแผนก</option>
+                        <option value="Engineering">Engineering</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Sales">Sales</option>
+                        <option value="HR">HR</option>
+                        <option value="Finance">Finance</option>
+                        <option value="IT">IT</option>
+                        <option value="CPE">CPE</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="salary">เงินเดือน (USD):</label>
+                    <input type="number" id="salary" min="0" step="0.01"
+                        required>
+                </div>
+                <button type="submit">เพิ่มพนักงาน</button>
+            </form>
+            <div id="addResponse" class="response"></div>
+        </div>
+
+        <div class="container">
+            <h2>🔍 ทดสอบ CORS</h2>
+            <button onclick="testCORS()">ทดสอบ CORS</button>
+            <div id="corsResponse" class="response"></div>
+        </div>
+
+        <script>
+        const API_BASE_URL = 'http://localhost:1880';
+
+        async function getEmployees() {
+            const responseDiv = document.getElementById('employeesResponse');
+            responseDiv.textContent = 'กำลังดึงข้อมูล...';
+            responseDiv.className = 'response';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/employees`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        topic: 'SELECT * FROM employees ORDER BY join_date DESC'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    responseDiv.textContent = JSON.stringify(data, null, 2);
+                    responseDiv.className = 'response success';
+                } else {
+                    responseDiv.textContent = `Error: ${response.status} - ${JSON.stringify(data, null, 2)}`;
+                    responseDiv.className = 'response error';
+                }
+            } catch (error) {
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.className = 'response error';
+            }
+        }
+
+        document.getElementById('addEmployeeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const responseDiv = document.getElementById('addResponse');
+            responseDiv.textContent = 'กำลังเพิ่มพนักงาน...';
+            responseDiv.className = 'response';
+
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                department: document.getElementById('department').value,
+                salary: document.getElementById('salary').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/employees/add`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    responseDiv.textContent = JSON.stringify(data, null, 2);
+                    responseDiv.className = 'response success';
+                    document.getElementById('addEmployeeForm').reset();
+                } else {
+                    responseDiv.textContent = `Error: ${response.status} - ${JSON.stringify(data, null, 2)}`;
+                    responseDiv.className = 'response error';
+                }
+            } catch (error) {
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.className = 'response error';
+            }
+        });
+
+        async function testCORS() {
+            const responseDiv = document.getElementById('corsResponse');
+            responseDiv.textContent = 'กำลังทดสอบ CORS...';
+            responseDiv.className = 'response';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/employees`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+
+                responseDiv.textContent = `CORS Headers:\n${JSON.stringify(headers, null, 2)}`;
+                responseDiv.className = 'response success';
+            } catch (error) {
+                responseDiv.textContent = `CORS Error: ${error.message}`;
+                responseDiv.className = 'response error';
+            }
+        }
+
+        // เพิ่มข้อมูลตัวอย่าง
+        function addSampleData() {
+            document.getElementById('name').value = 'สมชาย ใจดี';
+            document.getElementById('email').value = 'somchai@company.com';
+            document.getElementById('department').value = 'Engineering';
+            document.getElementById('salary').value = '75000';
+        }
+
+        // เพิ่มปุ่มสำหรับข้อมูลตัวอย่าง
+        const sampleButton = document.createElement('button');
+        sampleButton.textContent = 'ใส่ข้อมูลตัวอย่าง';
+        sampleButton.onclick = addSampleData;
+        sampleButton.style.marginTop = '10px';
+        document.getElementById('addEmployeeForm').appendChild(sampleButton);
+    </script>
+    </body>
+</html>

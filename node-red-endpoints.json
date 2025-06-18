@@ -1,0 +1,148 @@
+[
+  {
+    "id": "http-in-employees",
+    "type": "http in",
+    "z": "3107b21e9acff957",
+    "name": "Get Employees",
+    "url": "/api/employees",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 120,
+    "y": 100,
+    "wires": [["function-parse-query"]]
+  },
+  {
+    "id": "function-parse-query",
+    "type": "function",
+    "z": "3107b21e9acff957",
+    "name": "Parse Query",
+    "func": "// รับ query จาก request body\nmsg.topic = msg.payload.topic || 'SELECT * FROM employees ORDER BY join_date DESC';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 100,
+    "wires": [["632557da60ecb14f"]]
+  },
+  {
+    "id": "http-in-add-employee",
+    "type": "http in",
+    "z": "3107b21e9acff957",
+    "name": "Add Employee",
+    "url": "/api/employees/add",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 120,
+    "y": 200,
+    "wires": [["function-prepare-add"]]
+  },
+  {
+    "id": "function-prepare-add",
+    "type": "function",
+    "z": "3107b21e9acff957",
+    "name": "Prepare Add Employee",
+    "func": "// รับข้อมูลพนักงานใหม่จาก request body\nconst employeeData = msg.payload;\n\n// Sanitize input to prevent SQL injection\nconst name = employeeData.name.replace(/'/g, \"''\");\nconst email = employeeData.email.replace(/'/g, \"''\");\nconst department = employeeData.department.replace(/'/g, \"''\");\nconst salary = parseFloat(employeeData.salary);\n\nmsg.topic = `INSERT INTO employees (name, email, department, salary, join_date, status) \n             VALUES ('${name}', '${email}', \n                     '${department}', ${salary}, \n                     NOW(), 'Active')`;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 200,
+    "wires": [["93c87406933e076e"]]
+  },
+  {
+    "id": "http-response-employees",
+    "type": "http response",
+    "z": "3107b21e9acff957",
+    "name": "Employees Response",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    },
+    "x": 880,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "http-response-add",
+    "type": "http response",
+    "z": "3107b21e9acff957",
+    "name": "Add Employee Response",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    },
+    "x": 880,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "function-format-response",
+    "type": "function",
+    "z": "3107b21e9acff957",
+    "name": "Format Response",
+    "func": "// จัดรูปแบบข้อมูลสำหรับส่งกลับ\nif (msg.payload && Array.isArray(msg.payload)) {\n    msg.payload = msg.payload.map(row => {\n        return {\n            id: row.id,\n            name: row.name,\n            email: row.email,\n            department: row.department,\n            salary: parseFloat(row.salary),\n            join_date: row.join_date,\n            status: row.status\n        };\n    });\n} else {\n    msg.payload = [];\n}\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 720,
+    "y": 100,
+    "wires": [["http-response-employees"]]
+  },
+  {
+    "id": "function-format-add-response",
+    "type": "function",
+    "z": "3107b21e9acff957",
+    "name": "Format Add Response",
+    "func": "// จัดรูปแบบ response สำหรับการเพิ่มพนักงาน\nif (msg.payload && msg.payload.insertId) {\n    msg.payload = {\n        success: true,\n        message: 'เพิ่มพนักงานสำเร็จ',\n        id: msg.payload.insertId\n    };\n} else {\n    msg.payload = {\n        success: false,\n        message: 'เกิดข้อผิดพลาดในการเพิ่มพนักงาน'\n    };\n}\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 720,
+    "y": 200,
+    "wires": [["http-response-add"]]
+  },
+  {
+    "id": "http-in-options",
+    "type": "http in",
+    "z": "3107b21e9acff957",
+    "name": "CORS Options",
+    "url": "/api/*",
+    "method": "options",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 120,
+    "y": 300,
+    "wires": [["http-response-options"]]
+  },
+  {
+    "id": "http-response-options",
+    "type": "http response",
+    "z": "3107b21e9acff957",
+    "name": "CORS Options Response",
+    "statusCode": "200",
+    "headers": {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    },
+    "x": 320,
+    "y": 300,
+    "wires": []
+  }
+]
